@@ -9,6 +9,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/disintegration/imaging"
 	"github.com/k0kubun/go-ansi"
@@ -20,6 +21,7 @@ var (
 	inputDir          string
 	outputDir         string
 	recursive         bool
+	verbose           bool
 	fileType          string
 	fileTypes         []string
 	resolution        string
@@ -81,6 +83,7 @@ func init() {
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", "", "Location to the output directory. Will be created if does not exist (required)")
 	rootCmd.Flags().StringVarP(&fileType, "type", "t", "png,jpg", "Image file type(s) separated by commas")
 	rootCmd.Flags().StringVarP(&resolution, "resolution", "R", "", "Target image resolution in <width>x<height> format (e.g 1920x1080) (required)")
+	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Print reasoning for all failed operations")
 
 	rootCmd.MarkFlagRequired("input-dir")
 	rootCmd.MarkFlagRequired("output-dir")
@@ -215,18 +218,32 @@ func copyFilesWithProgress(fo []FileOperation) {
 		}))
 
 	var errs []string
-	for i := 0; i < len(fo); i++ {
-		err := processImage(fo[i])
-		if err != nil {
-			errs = append(errs, fmt.Sprintf("Error processing image: %s\n", err.Error()))
-		}
-		// HOX: We can't print out anything before this loop is finished as it messes up the progress bar
-		bar.Add(1)
+	var wg sync.WaitGroup
+
+	for _, f := range fo {
+		wg.Add(1)
+
+		go func(fo FileOperation) {
+			defer wg.Done()
+			err := processImage(fo)
+			if err != nil {
+				errs = append(errs, fmt.Sprintf("Error processing image: %s\n", err.Error()))
+			}
+			// HOX: We can't print out anything before this loop is finished as it messes up the progress bar
+			bar.Add(1)
+		}(f)
 	}
 
+	wg.Wait()
+
 	// Print out errors occured during copying, after the progressbar has finished
-	for _, e := range errs {
-		fmt.Println(e)
+	if len(errs) > 0 {
+		fmt.Printf("\n%d image operations failed\n", len(errs))
+	}
+	if verbose {
+		for _, e := range errs {
+			fmt.Println(e)
+		}
 	}
 }
 
