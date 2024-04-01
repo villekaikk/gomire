@@ -75,7 +75,7 @@ func Execute() {
 }
 
 func init() {
-	// Flags
+
 	rootCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and resize images from subfolders (required)")
 	rootCmd.Flags().StringVarP(&inputDir, "input-dir", "i", "", "Location to the image directory (required)")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", "", "Location to the output directory. Will be created if does not exist (required)")
@@ -97,8 +97,6 @@ func cmdMain(cmd *cobra.Command, args []string) {
 		fmt.Printf("Error enumerating input files: %e\n", err)
 		os.Exit(2)
 	}
-
-	// fmt.Println(files[0])
 
 	if len(files) == 0 {
 		fmt.Println("No files found")
@@ -150,8 +148,12 @@ func validateFlags() {
 
 	// Format all requested filetypes to be like ".jpg"
 	fileTypes = strings.Split(fileType, ",")
-	fileTypes = utils.RemoveEmptyEntries(fileTypes)
 	for i, v := range fileTypes {
+
+		if utils.IsStringEmpty(v) {
+			continue
+		}
+
 		if v[0] != '.' {
 			fileTypes[i] = fmt.Sprintf(".%s", v)
 		}
@@ -218,6 +220,7 @@ func copyFilesWithProgress(fo []FileOperation) {
 		if err != nil {
 			errs = append(errs, fmt.Sprintf("Error processing image: %s\n", err.Error()))
 		}
+		// HOX: We can't print out anything before this loop is finished as it messes up the progress bar
 		bar.Add(1)
 	}
 
