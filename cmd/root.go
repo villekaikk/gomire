@@ -4,15 +4,16 @@ import (
 	"fmt"
 	"gomire/internal/utils"
 	"io/fs"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"slices"
 	"strconv"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/disintegration/imaging"
-	"github.com/k0kubun/go-ansi"
 	"github.com/schollz/progressbar/v3"
 	"github.com/spf13/cobra"
 )
@@ -211,35 +212,31 @@ func isSupportedFiletype(s string) bool {
 // Loops through all requested files and displays CLI progress bar during the operation
 func copyFilesWithProgress(fo []FileOperation) {
 
-	bar := progressbar.NewOptions(len(fo),
-		progressbar.OptionSetWriter(ansi.NewAnsiStdout()),
-		progressbar.OptionEnableColorCodes(true),
-		progressbar.OptionShowBytes(false),
+	bar := progressbar.NewOptions(
+		len(fo),
+		progressbar.OptionSetDescription("Resizing images:"),
 		progressbar.OptionShowCount(),
 		progressbar.OptionSetWidth(20),
-		progressbar.OptionSetDescription("[cyan]Resizing images:[reset]"),
-		progressbar.OptionSetTheme(progressbar.Theme{
-			Saucer:        "[green]=[reset]",
-			SaucerHead:    "[green]>[reset]",
-			SaucerPadding: " ",
-			BarStart:      "[",
-			BarEnd:        "]",
-		}))
+		progressbar.OptionShowElapsedTimeOnFinish(),
+		progressbar.OptionThrottle(time.Duration(200*time.Millisecond)),
+	)
 
+	time.Sleep(500 * time.Millisecond)
 	var errs []string
 	var wg sync.WaitGroup
+	rand.NewSource(time.Now().UnixNano())
 
 	for _, f := range fo {
 		wg.Add(1)
 
 		go func(fo FileOperation) {
+			// HOX: We can't print out anything before this loop is finished as it messes up the progress bar
 			defer wg.Done()
+			defer bar.Add(1)
 			err := processImage(fo)
 			if err != nil {
 				errs = append(errs, fmt.Sprintf("Error processing image: %s\n", err.Error()))
 			}
-			// HOX: We can't print out anything before this loop is finished as it messes up the progress bar
-			bar.Add(1)
 		}(f)
 	}
 
@@ -266,6 +263,11 @@ func processImage(fo FileOperation) error {
 	}
 
 	dstImg := imaging.Resize(srcImg, fo.targetWidth, fo.targetHeight, imaging.Lanczos)
+
+	err = os.MkdirAll(filepath.Dir(fo.targetPath), os.ModeDir)
+	if err != nil {
+		return fmt.Errorf("error creating destination folder %s: %s", fo.targetPath, err.Error())
+	}
 
 	err = imaging.Save(dstImg, fo.targetPath)
 	if err != nil {
