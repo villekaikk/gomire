@@ -161,6 +161,15 @@ func validateFlags() {
 			fileTypes[i] = fmt.Sprintf(".%s", v)
 		}
 	}
+
+	// Resolution
+	resolution = strings.ToLower(resolution)
+	resolution = strings.TrimSpace(resolution)
+	if !strings.Contains(resolution, "x") {
+		fmt.Println("Invalid resolution format: missing \"x\" as a dimensional separator")
+		os.Exit(2)
+	}
+
 }
 
 func listFilesToBeCopies() ([]FileOperation, error) {
