@@ -26,7 +26,7 @@ var (
 	fileType          string
 	fileTypes         []string
 	resolution        string
-	supportedImgTypes = []string{".jpg", ".png", ".gif", ".tif", ".bmp"}
+	supportedImgTypes = []string{"jpg", "png", "gif", "tif", "bmp"}
 )
 
 type FileOperation struct {
@@ -82,7 +82,7 @@ func init() {
 	rootCmd.Flags().BoolVarP(&recursive, "recursive", "r", false, "Find and resize images from subfolders (required)")
 	rootCmd.Flags().StringVarP(&inputDir, "input-dir", "i", "", "Location to the image directory (required)")
 	rootCmd.Flags().StringVarP(&outputDir, "output-dir", "o", "", "Location to the output directory. Will be created if does not exist (required)")
-	rootCmd.Flags().StringVarP(&fileType, "type", "t", "png,jpg", "Image file type(s) separated by commas")
+	rootCmd.Flags().StringVarP(&fileType, "type", "t", "png,jpg", fmt.Sprintf("Image file type(s) separated by commas. Supported filetypes are %s", strings.Join(supportedImgTypes, ", ")))
 	rootCmd.Flags().StringVarP(&resolution, "resolution", "R", "", "Target image resolution in <width>x<height> format (e.g 1920x1080) (required)")
 	rootCmd.Flags().BoolVarP(&verbose, "verbose", "v", false, "Print reasoning for all failed operations")
 
@@ -206,7 +206,7 @@ func listFilesToBeCopies() ([]FileOperation, error) {
 
 func isSupportedFiletype(s string) bool {
 
-	return slices.Contains(supportedImgTypes, strings.ToLower(s))
+	return slices.Contains(supportedImgTypes, strings.ToLower(s)[1:])
 }
 
 // Loops through all requested files and displays CLI progress bar during the operation
