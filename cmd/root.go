@@ -216,7 +216,7 @@ func copyFilesWithProgress(fo []FileOperation) {
 		len(fo),
 		progressbar.OptionSetDescription("Resizing images:"),
 		progressbar.OptionShowCount(),
-		progressbar.OptionSetWidth(20),
+		progressbar.OptionSetWidth(-1),
 		progressbar.OptionShowElapsedTimeOnFinish(),
 		progressbar.OptionThrottle(time.Duration(200*time.Millisecond)),
 	)
